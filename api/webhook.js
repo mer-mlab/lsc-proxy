@@ -21,17 +21,22 @@ export default async function handler(req, res) {
       const data = await response.text();
       console.log("Сырой ответ от YC:", response.status, data);
       
+      // ВАЖНО: Telegram требует application/json!
+      res.setHeader('Content-Type', 'application/json');
+      
       try {
           const ycResponse = JSON.parse(data);
           // Если YC вернул ответ в формате Lambda (с полем body и statusCode)
           if (ycResponse.statusCode !== undefined && ycResponse.body !== undefined) {
               console.log("Извлекаем тело ответа из YC Lambda-формата");
-              // Устанавливаем заголовки, если они есть
+              // Устанавливаем заголовки из YC, если они есть
               if (ycResponse.headers) {
                   for (const key in ycResponse.headers) {
                       res.setHeader(key, ycResponse.headers[key]);
                   }
               }
+              // Гарантируем, что Content-Type именно application/json
+              res.setHeader('Content-Type', 'application/json');
               // Отдаем Telegram чистое тело (body)
               res.status(ycResponse.statusCode).send(ycResponse.body);
           } else {
@@ -45,6 +50,7 @@ export default async function handler(req, res) {
       }
     } catch (error) {
       console.error('Proxy Error:', error);
+      res.setHeader('Content-Type', 'application/json');
       res.status(500).json({ error: 'Proxy failed to reach Yandex Cloud' });
     }
   } else {
